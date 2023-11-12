@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  nginx:
+    container_name: 'nginx-service'
+    build:
+      context: .
+      dockerfile: nginx/nginx.Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/certificate/server.crt:/etc/ssl/certificate/server.crt
+      - ./nginx/certificate/server.key:/etc/ssl/certificate/server.key
+    depends_on:
+      - app
+  app:
+    build: .
+    command: uvicorn src.main:app --host ${project_host} --port ${project_port}
+    volumes:
+      - ./src/:/app/src/
+    expose:
+      - 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+  postgres:
+    image: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_NAME}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+  redis:
+    image: redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+volumes:
+  app_data:
+  postgres_data:
+  redis_data:
